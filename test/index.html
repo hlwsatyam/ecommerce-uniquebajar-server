@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product Upload</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+
+      form {
+        display: flex;
+        flex-direction: column;
+        max-width: 400px;
+        margin: auto;
+      }
+
+      label {
+        margin-bottom: 8px;
+      }
+
+      input {
+        margin-bottom: 16px;
+        padding: 8px;
+      }
+
+      button {
+        padding: 10px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <form id="uploadForm">
+      <label for="token">Token:</label>
+      <input
+        type="text"
+        id="token"
+        name="token"
+        value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzA0NzEwOTI5LCJleHAiOjE3MTMyNjQ1Mjl9.qF885JZyp9FFOnqRerzFiLbaMtNbGFqM6DcMsJpTXVs"
+        required
+        readonly
+      />
+
+      <label for="product_brand">Product Brand:</label>
+      <input
+        type="text"
+        id="product_brand"
+        name="product_brand"
+        value="gooloo"
+        required
+      />
+
+      <label for="product_title">Product Title:</label>
+      <input
+        type="text"
+        id="product_title"
+        name="product_title"
+        value="fd 20g "
+        required
+      />
+
+      <label for="discount">Discount:</label>
+      <input type="number" id="discount" name="discount" value="12" required />
+
+      <label for="real_price">Real Price:</label>
+      <input
+        type="number"
+        id="real_price"
+        name="real_price"
+        value="32"
+        required
+      />
+
+      <label for="discount_price">Discount Price:</label>
+      <input
+        type="number"
+        id="discount_price"
+        name="discount_price"
+        value="28"
+        required
+      />
+
+      <label for="sold_by">Sold By:</label>
+      <input
+        type="text"
+        id="sold_by"
+        name="sold_by"
+        value="tanisha bekery"
+        required
+      />
+
+      <label for="feature_details">Feature Details:</label>
+      <input
+        type="text"
+        id="feature_details"
+        name="feature_details"
+        value="1 kg for table"
+        required
+      />
+
+      <label for="description">Description:</label>
+      <input
+        type="text"
+        id="description"
+        name="description"
+        value="1kg pack"
+        required
+      />
+
+      <label for="product_information">Product Information:</label>
+      <input
+        type="text"
+        id="product_information"
+        name="product_information"
+        value="23 dor 4"
+        required
+      />
+
+      <label for="return_time">Return Time:</label>
+      <input
+        type="number"
+        id="return_time"
+        name="return_time"
+        value="2"
+        required
+      />
+
+      <label for="client_id">Client ID:</label>
+      <input type="number" id="client_id" name="client_id" value="2" required />
+
+      <label for="image">Product Image:</label>
+      <input type="file" id="image" name="image" accept="image/*" required />
+
+      <button type="button" onclick="uploadProduct()">Upload Product</button>
+    </form>
+
+    <script>
+      async function uploadProduct() {
+        const token = document.getElementById("token").value;
+        const productBrand = document.getElementById("product_brand").value;
+        const productTitle = document.getElementById("product_title").value;
+        const discount = document.getElementById("discount").value;
+        const realPrice = document.getElementById("real_price").value;
+        const discountPrice = document.getElementById("discount_price").value;
+        const soldBy = document.getElementById("sold_by").value;
+        const featureDetails = document.getElementById("feature_details").value;
+        const description = document.getElementById("description").value;
+        const productInformation = document.getElementById(
+          "product_information"
+        ).value;
+        const returnTime = document.getElementById("return_time").value;
+        const clientId = document.getElementById("client_id").value;
+
+        const imageInput = document.getElementById("image");
+        const image = imageInput.files[0];
+
+        const formData = {
+          token,
+          product_brand: productBrand,
+          product_title: productTitle,
+          discount,
+          real_price: realPrice,
+          discount_price: discountPrice,
+          sold_by: soldBy,
+          feature_details: featureDetails,
+          description,
+          product_information: productInformation,
+          return_time: returnTime,
+          client_id: clientId,
+          image: image,
+          // Add more fields for other product details
+        };
+     
+        try {
+          const response = await fetch(
+            "http://localhost:8800/api/dry_fruits/uploadProduct",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                
+              },
+              body: JSON.stringify(formData),
+            }
+          );
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log(result);
+            alert("Product uploaded successfully!");
+          } else {
+            console.error("Error uploading product:", response.statusText);
+            alert(
+              "Error uploading product. Please check the console for details."
+            );
+          }
+        } catch (error) {
+          console.error("Network error:", error);
+          alert("Network error. Please check the console for details.");
+        }
+      }
+    </script>
+  </body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Upload</title>
+  </head>
+  <body>
+    <h1>Image Upload</h1>
+    <form id="uploadForm">
+      <label for="clientName">Client Name:</label>
+      <input type="text" id="clientName" name="clientName" required />
+
+      <label for="image">Image:</label>
+      <input type="file" id="image" name="image" accept="image/*" required />
+
+      <button type="button" onclick="uploadImage()">Upload</button>
+    </form>
+
+    <script>
+      async function uploadImage() {
+        const clientName = document.getElementById("clientName").value;
+        const imageInput = document.getElementById("image");
+        const imageFile = imageInput.files[0];
+
+        const formData = new FormData();
+        formData.append("clientName", clientName);
+        formData.append(
+          "token",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzA0NzExNjc4LCJleHAiOjE3MTMyNjUyNzh9.Uw_NFFq2k2fnxI98_ZMJowI5hhOdIgt9oe-WdoCaSCA"
+        );
+        formData.append("image", imageFile);
+
+        try {
+          const response = await fetch("http://localhost:8800/api/dry_fruits/uploadProduct", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log(result);
+            alert(
+              "Image uploaded successfully!\n\nResponse:\n" +
+                JSON.stringify(result, null, 2)
+            );
+          } else {
+            console.error("Error uploading image:", response.statusText);
+            alert(
+              "Error uploading image. Please check the console for details."
+            );
+          }
+        } catch (error) {
+          console.error("Network error:", error);
+          alert("Network error. Please check the console for details.");
+        }
+      }
+    </script>
+  </body>
+</html>
