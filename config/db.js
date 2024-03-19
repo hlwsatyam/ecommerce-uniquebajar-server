@@ -1,13 +1,16 @@
 const sql = require("mysql2/promise");
-
 const DBconnection = sql.createPool({
-  "host": "viaduct.proxy.rlwy.net",
-  "user": "root",
-  "password": "54abdH6DFB1bc5bh--Eg-5ch65ecHCD6",
-  "database": "railway",
-  "port":56459
+ /*  host: "localhost",
+  user: "root", 
+  password: "",
+  database: "eccommerce_uniquebajar", */
+  host: "bev468uhbrummaolbhgv-mysql.services.clever-cloud.com",
+  user: "uynav9vpzfhppe2v", 
+  password: "cOEiXwSjsegSo4YCLUvq",
+  port: 3306,
+  database: "bev468uhbrummaolbhgv",
 });
- 
+
 // Use .then() to handle the promise returned by createPool
 DBconnection.getConnection()
   .then((connection) => {
@@ -15,7 +18,7 @@ DBconnection.getConnection()
     connection.release(); // Release the connection when done
   })
   .catch((err) => {
-    console.error("Error connecting to MySQL:", err.message);
+    console.error("Error connecting to MySQL:", err);
   });
 
 module.exports = { DBconnection };

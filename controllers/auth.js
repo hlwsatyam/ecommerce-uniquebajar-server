@@ -104,7 +104,7 @@ const sellerlogin = async (req, res, next) => {
         process.env.JWT_SECRET_KEY,
         {
           expiresIn: "99d",
-        } 
+        }
       );
       return res.status(200).json({ token });
     } else {
@@ -483,7 +483,7 @@ const CustomerProfileUpdate = async (req, res, next) => {
       customer_id = decoded.id;
     }
   });
-  console.log(customer_id);
+  console.log(latestUserData.dob);
   try {
     let [existingUser] = await DBconnection.query(
       "UPDATE customer SET email=?, first_name=?, last_name=?, dob=?, gender=? WHERE customer_id = ?",
@@ -496,9 +496,7 @@ const CustomerProfileUpdate = async (req, res, next) => {
         customer_id,
       ]
     );
-
     console.log(existingUser);
-
     if (existingUser.affectedRows > 0) {
       // Assuming 'affectedRows' indicates how many rows were affected by the update
       return res.status(200).send("updated");
@@ -649,7 +647,7 @@ const sellerCreate = async (req, res, next) => {
       storeName,
       storeDescription,
     } = req.body;
-
+    console.log(email);
     // Check if the seller already exists
     const [existingUser] = await DBconnection.query(
       "SELECT * FROM seller WHERE email = ?",
@@ -694,14 +692,35 @@ const sellerCreate = async (req, res, next) => {
       { seller_id: sellerId },
       process.env.JWT_SECRET_KEY,
       {
-        expiresIn: "10m",
+        expiresIn: "1y",
       }
     );
-    await sendVerificationEmail(email, sellerToken);
-    res.status(200).json({
-      message: "Seller created successfully",
-      sellerId,
-    });
+    // try {
+    //   await sendVerificationEmail(email, sellerToken);
+    // } catch (error) {
+    //   await DBconnection.execute(`remove seller where email =?`, [email]);
+    //   next(ErrorCreate(503, "Something Went Worng!"));
+    // }
+
+    // res.status(200).json({
+    //   message: "Seller created successfully",
+    //   sellerId,
+    // });
+    try {
+      await sendVerificationEmail(email, sellerToken);
+      res.status(200).json({
+        message: "Seller created successfully",
+        sellerId,
+      });
+    } catch (error) {
+      // If there is an error sending the email, remove the seller from the database
+      await DBconnection.execute(`DELETE FROM seller WHERE email = ?`, [email]);
+      console.error("Error sending verification email:", error);
+      res.status(503).json({
+        message: "Failed to send verification email",
+        error: error.message,
+      });
+    }
   } catch (error) {
     console.error(error);
     next(ErrorCreate(503, "Server Internal Error!"));

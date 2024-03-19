@@ -7,10 +7,10 @@ const router = require("./routes");
 const { ErrorController } = require("./createError/createError");
 const { DBconnection } = require("./config/db");
 const { insertMultipleData } = require("./Data/InsertData/InsertData");
-const fs = require('fs').promises;
-const mysql = require('mysql2/promise');
+const fs = require("fs").promises;
+const mysql = require("mysql2/promise");
 
-require("dotenv").config({path:'./.env'});
+require("dotenv").config({ path: "./.env" });
 require("./config/db");
 const app = express();
 
@@ -21,51 +21,35 @@ app.use("/uploads", express.static("uploads"));
 app.use(express.json());
 
 const RunQue = async () => {
-  let DBconnection;
-
   try {
-    DBconnection = await mysql.createPool({
-      host: "viaduct.proxy.rlwy.net",
-      user: "root",
-      password: "54abdH6DFB1bc5bh--Eg-5ch65ecHCD6",
-      database: "railway",
-      port: 56459,
-    });
-
-    // Read your SQL file
-    const sqlFileContent = await fs.readFile(
-      "./Data/eccommerce_uniquebajar (4).sql",
-      "utf8"
-    );
-
-    // Split the SQL file content into individual queries
-    const queries = sqlFileContent.split(";");
-
-    // Iterate through queries and execute them
-    for (const query of queries) {
-      if (query.trim() !== "") {
-        try {
-          // Execute the query
-          await DBconnection.query(query);
-        } catch (error) {
-          // Handle errors - log the error or perform additional actions
-          console.error("Error executing query:", error);
-        }
-      }
-    }
-
-    console.log("Database import completed.");
+    await DBconnection.query(`
+      ALTER TABLE customer
+      MODIFY COLUMN customer_id INT(11) NOT NULL AUTO_INCREMENT,
+      MODIFY COLUMN first_name VARCHAR(50) NULL,
+      MODIFY COLUMN last_name VARCHAR(50)  NULL,
+      MODIFY COLUMN email VARCHAR(100) NOT NULL,
+      MODIFY COLUMN phone_number VARCHAR(20) NOT NULL,
+      MODIFY COLUMN address_line1 VARCHAR(255)  NULL,
+      MODIFY COLUMN address_line2 VARCHAR(255)  NULL,
+      MODIFY COLUMN city VARCHAR(100)  NULL,
+      MODIFY COLUMN state VARCHAR(100)  NULL,
+      MODIFY COLUMN zip_code VARCHAR(20)  NULL,
+      MODIFY COLUMN country VARCHAR(100)  NULL,
+      MODIFY COLUMN registration_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+      MODIFY COLUMN dob DATE  NULL,
+      MODIFY COLUMN gender VARCHAR(22)  NULL,
+      MODIFY COLUMN account_status VARCHAR(22)  NULL,
+      MODIFY COLUMN preferred_language VARCHAR(22)  NULL,
+      MODIFY COLUMN last_login TIMESTAMP NULL DEFAULT NULL,
+      ADD INDEX (email)
+    `);
+    console.log("table modified");
   } catch (error) {
-    console.error("Error importing database:", error);
-  } finally {
-    if (DBconnection) {
-      // Close the connection pool in the 'finally' block to ensure it's closed even if an error occurs
-      DBconnection.end();
-    }
+    console.log("failed to modify table:", error);
   }
 };
 
-// RunQue();
+//  RunQue();
 
 // insertMultipleData()
 

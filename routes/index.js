@@ -64,7 +64,6 @@ const uploadsForProfile = multer({ storage: storageForProfile });
 const upload = multer({ storage: storage });
 router.get("/", helloWorld);
 router.get("/vereifying/seller/:token", sellerVerifying);
-
 router.post("/login", login);
 router.post("/sellerlogin", sellerlogin);
 router.post("/seller/order/orderlist", sellerOrderList);
