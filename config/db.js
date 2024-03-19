@@ -21,25 +21,31 @@
 //   });
 
 // module.exports = { DBconnection };
+const mysql = require("mysql2/promise");
 
-const mysql = require("mysql2");
-
-// Create a MySQL connection
-const DBconnection = mysql.createConnection({
- 
+// Create a MySQL connection pool
+const DBconnection = mysql.createPool({
+  /*  host: "localhost",
+  user: "root", 
+  password: "",
+  database: "eccommerce_uniquebajar", */
   host: "bev468uhbrummaolbhgv-mysql.services.clever-cloud.com",
   user: "uynav9vpzfhppe2v",
   password: "cOEiXwSjsegSo4YCLUvq",
   port: 3306,
   database: "bev468uhbrummaolbhgv",
+  connectionLimit: 1, // Set connection limit to 1 for a single connection
 });
 
-DBconnection.connect((err) => {
-  if (err) {
-    console.error("Error connecting to MySQL:", err);
-    return;
-  }
-  console.log("MySQL DB is connected!");
-});
+// Execute a simple query to check if the connection is successful
+DBconnection.query('SELECT 1')
+  .then(([rows, fields]) => {
+    console.log('MySQL DB is connected!');
+  })
+  .catch(err => {
+    console.error('Error connecting to MySQL:', err);
+  });
 
+// Export the DB connection
 module.exports = { DBconnection };
+
