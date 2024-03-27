@@ -295,7 +295,7 @@ const RandomLatestProduct = async (req, res, next) => {
     }
 
     const products = productResult;
-    res.status(200).send(products);
+    res.status(200).send(products); 
   } catch (error) {
     console.error(error);
     next({ status: 500, message: "Internal Server Error" });
