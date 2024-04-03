@@ -4,14 +4,14 @@ const mysql = require("mysql2/promise");
 const DBconnection = mysql.createPool({
   // host: "localhost",
   // user: "root",
-  // password: "", 
+  // password: "",
   // port: 3306,
   // database: "eccommerce_uniquebajar",
   host: "unique-bajar-db.cte2uw8ii1ew.eu-north-1.rds.amazonaws.com",
   user: "admin",
   password: "2017Krishna",
   port: 3306,
-  database: "uniqu_bajar", 
+  database: "uniqu_bajar",
 });
 DBconnection.getConnection()
   .then((connection) => {

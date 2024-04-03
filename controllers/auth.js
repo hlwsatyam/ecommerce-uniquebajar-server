@@ -182,7 +182,7 @@ const customerOrderPlace = async (req, res, next) => {
   try {
     const { productDetails, customerId, DeleveryAddress } = req.body;
     const allProductForOrder = JSON.parse(productDetails);
-    console.log();
+
     const decoded = await verifyCustomerToken(customerId);
     const customer_id = decoded.id;
 
@@ -199,10 +199,17 @@ const customerOrderPlace = async (req, res, next) => {
           currentDate.getTime() + 7 * 24 * 60 * 60 * 1000
         );
 
-        console.log(reachingTime.toISOString());
+        
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Adding 1 because getMonth() returns zero-based month
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        console.log(formattedDate);
+        
+
         const query = `
           INSERT INTO customer_order 
-          SET product_id=?,product_count=?, customer_id=?, address_id=?, reaching_time=?
+          SET product_id=?,product_count=?,  customer_id=?, address_id=?,order_date=?, reaching_time=?
         `;
 
         await connection.query(query, [
@@ -210,6 +217,7 @@ const customerOrderPlace = async (req, res, next) => {
           product.count,
           customer_id,
           DeleveryAddress,
+          formattedDate,
           reachingTime,
         ]);
       }
@@ -512,12 +520,12 @@ const CustomerProfileUpdate = async (req, res, next) => {
 const CustomerNewAddressAdd = async (req, res, next) => {
   let { token, addressData } = req.body;
   let customer_id;
-  console.log(token)
+  console.log(token);
   jwt.verify(token, process.env.JWT_SECRET_KEY, (err, decoded) => {
     if (err) {
       return next(ErrorCreate(503, "Server Internal Error!"));
     } else {
-console.log(decoded)
+      console.log(decoded);
       customer_id = decoded.id;
     }
   });
