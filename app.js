@@ -27,4 +27,8 @@ app.use("/api", router);
 
 app.use(ErrorController);
 
-module.exports = app;
+const PORT = process.env.PORT || 8800;
+
+app.listen(PORT, () => {
+  console.log(`Server Is Running On PORT : ${PORT}`);
+});

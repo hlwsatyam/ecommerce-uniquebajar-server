@@ -4,8 +4,8 @@
   "description": "Professional e-commerce backend for Unique Bajar",
   "main": "app.js",
   "scripts": {
-    "start": "node bin/www",
-    "dev": "nodemon bin/www"
+    "start": "node app.js",
+    "dev": "nodemon app.js"
   },
   "keywords": [
     "e-commerce",

@@ -16,7 +16,7 @@ const userAuthMobVerification = async (req, res, next) => {
   const api_key = "YZQmyIlOK5WC3YsnDVVeYJaFL0a7KyQ3";
   let jwt_response;
   let jwt_phone;
-  try {
+  try { 
     const decoded = jwt.verify(token, api_key, { algorithm: "HS256" });
     jwt_response = 1;
     jwt_phone = decoded.country_code + decoded.phone_no;
@@ -30,9 +30,8 @@ const userAuthMobVerification = async (req, res, next) => {
       "SELECT * FROM customer WHERE phone_number = ?",
       [jwt_phone]
     );
-    console.log(existingUser);
+
     if (existingUser.length > 0) {
-      console.log("ifffffff");
       // If the user exists, generate a token with their unique ID
       const customerToken = jwt.sign(
         { id: existingUser[0].customer_id },
@@ -43,14 +42,13 @@ const userAuthMobVerification = async (req, res, next) => {
       );
       return res.status(200).json({ customerToken });
     } else {
-      console.log("else");
       // If the user doesn't exist, insert a new user with name and phone
       const result = await DBconnection.execute(
         "INSERT INTO customer (phone_number,email) VALUES (?, ?)",
         [jwt_phone, `${jwt_phone}@uniquebajar.com`]
       );
 
-      const userId = result.customer_id;
+      const userId = result[0].insertId;
 
       // Generate a token for the newly created user
       const customerToken = jwt.sign(

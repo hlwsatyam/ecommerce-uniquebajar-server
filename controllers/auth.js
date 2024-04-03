@@ -512,10 +512,12 @@ const CustomerProfileUpdate = async (req, res, next) => {
 const CustomerNewAddressAdd = async (req, res, next) => {
   let { token, addressData } = req.body;
   let customer_id;
+  console.log(token)
   jwt.verify(token, process.env.JWT_SECRET_KEY, (err, decoded) => {
     if (err) {
       return next(ErrorCreate(503, "Server Internal Error!"));
     } else {
+console.log(decoded)
       customer_id = decoded.id;
     }
   });

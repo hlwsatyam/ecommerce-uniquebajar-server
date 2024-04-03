@@ -2,11 +2,16 @@ const mysql = require("mysql2/promise");
 
 // Create a MySQL connection pool
 const DBconnection = mysql.createPool({
-  host: "sql10.freesqldatabase.com",
-  user: "sql10694641",
-  password: "n6EFNGc8LS",
+  // host: "localhost",
+  // user: "root",
+  // password: "", 
+  // port: 3306,
+  // database: "eccommerce_uniquebajar",
+  host: "unique-bajar-db.cte2uw8ii1ew.eu-north-1.rds.amazonaws.com",
+  user: "admin",
+  password: "2017Krishna",
   port: 3306,
-  database: "sql10694641",
+  database: "uniqu_bajar", 
 });
 DBconnection.getConnection()
   .then((connection) => {
