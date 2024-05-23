@@ -34,6 +34,7 @@ const {
   allSellerProduct,
   deleteSellerProduct,
   likeProduct,
+  sellerforgotpassword,
 } = require("../controllers/productControllers");
 const path = require("path");
 const router = app.Router();
@@ -89,6 +90,7 @@ router.post("/customer/addaddress", CustomerNewAddressAdd);
 router.post("/product/addComment", AddCommentOnProduct);
 router.post("/product/review", ReviewOnProduct);
 router.post("/product/likeproduct", likeProduct);
+router.post("/seller/sellerforgotpassword", sellerforgotpassword);
 
 // router.post("/product/review", ReviewOnProduct);
 

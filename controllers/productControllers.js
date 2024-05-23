@@ -4,6 +4,10 @@ const {
   discountCalculatePercentage,
 } = require("../supportiveFunction/controllerSupport");
 const { ErrorCreate } = require("../createError/createError");
+const {
+  isValidGmail,
+  sendForgetedPassword,
+} = require("../supportiveFunctions/f1");
 const uploadProduct = async (req, res, next) => {
   const seller_id = req.user.id;
   console.log(seller_id);
@@ -173,6 +177,28 @@ const likeProduct = async (req, res, next) => {
     next(ErrorCreate(error.status, error.message));
   }
 };
+const sellerforgotpassword = async (req, res, next) => {
+  const { email } = req.body;
+
+  try {
+    if (!isValidGmail(email))
+      return res.status(203).json({ message: "Invalid email address" });
+    const [existingUser] = await DBconnection.query(
+      "SELECT * FROM seller WHERE email = ?",
+      [email]
+    );
+    if (existingUser.length > 0) {
+      await sendForgetedPassword(email, existingUser[0]?.password);
+      return res
+        .status(200)
+        .json({ message: "We Send You a Password On Registred Email" });
+    } else {
+      return res.status(203).json({ message: "Invalid email address" });
+    }
+  } catch (error) {
+    next(ErrorCreate(error.status, error.message));
+  }
+};
 
 const productById = async (req, res, next) => {
   const { id } = req.params;
@@ -295,7 +321,7 @@ const RandomLatestProduct = async (req, res, next) => {
     }
 
     const products = productResult;
-    res.status(200).send(products); 
+    res.status(200).send(products);
   } catch (error) {
     console.error(error);
     next({ status: 500, message: "Internal Server Error" });
@@ -308,6 +334,7 @@ module.exports = {
   ProductBySearch,
   RandomLatestProduct,
   allSellerProduct,
+  sellerforgotpassword,
   deleteSellerProduct,
   likeProduct,
 };
