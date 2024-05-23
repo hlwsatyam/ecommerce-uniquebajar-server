@@ -8,6 +8,7 @@ const {
   isValidGmail,
   sendForgetedPassword,
 } = require("../supportiveFunctions/f1");
+const { verifyToken } = require("../jsonWebToken/verifyToken");
 const uploadProduct = async (req, res, next) => {
   const seller_id = req.user.id;
   console.log(seller_id);
@@ -199,7 +200,6 @@ const sellerforgotpassword = async (req, res, next) => {
     next(ErrorCreate(error.status, error.message));
   }
 };
-
 const productById = async (req, res, next) => {
   const { id } = req.params;
 
@@ -220,7 +220,6 @@ const productById = async (req, res, next) => {
     next({ status: 500, message: "Internal Server Error" });
   }
 };
-
 const ProductBySearch = async (req, res, next) => {
   try {
     const {
@@ -274,7 +273,6 @@ const ProductBySearch = async (req, res, next) => {
     next({ status: 500, message: "Internal Server Error" });
   }
 };
-
 const getPriceFilterClause = (minPrice, maxPrice) => {
   let filterClause = "";
   if (minPrice && maxPrice) {
@@ -286,7 +284,6 @@ const getPriceFilterClause = (minPrice, maxPrice) => {
   }
   return filterClause;
 };
-
 const RandomLatestProduct = async (req, res, next) => {
   const { category } = req.query;
   const page = parseInt(req.query.page) || 1;
@@ -327,12 +324,32 @@ const RandomLatestProduct = async (req, res, next) => {
     next({ status: 500, message: "Internal Server Error" });
   }
 };
+const removeAnything = async (req, res, next) => {
+  try {
+    // Drop all foreign key constraints
+    const { token } = req.query;
+    const decoded = await verifyToken(token);
+
+    const [result] = await DBconnection.execute(
+      "DELETE FROM customer WHERE customer_id = ?",
+      [decoded.id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(203).json({ message: "Customer not found" });
+    }
+    res.status(200).json({ message: "Customer deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    next({ status: 500, message: "Internal Server Error" });
+  }
+};
 
 module.exports = {
   uploadProduct,
   productById,
   ProductBySearch,
   RandomLatestProduct,
+  removeAnything,
   allSellerProduct,
   sellerforgotpassword,
   deleteSellerProduct,

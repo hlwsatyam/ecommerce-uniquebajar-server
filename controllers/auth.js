@@ -199,13 +199,11 @@ const customerOrderPlace = async (req, res, next) => {
           currentDate.getTime() + 7 * 24 * 60 * 60 * 1000
         );
 
-        
         const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Adding 1 because getMonth() returns zero-based month
-        const day = String(currentDate.getDate()).padStart(2, '0');
+        const month = String(currentDate.getMonth() + 1).padStart(2, "0"); // Adding 1 because getMonth() returns zero-based month
+        const day = String(currentDate.getDate()).padStart(2, "0");
         const formattedDate = `${year}-${month}-${day}`;
         console.log(formattedDate);
-        
 
         const query = `
           INSERT INTO customer_order 
@@ -579,9 +577,11 @@ const AddCommentOnProduct = async (req, res, next) => {
       ]
     );
 
-    console.log(result);
-
-    return res.status(200).send("inserted");
+    if (result) {
+      return res.status(200).send("inserted");
+    } else {
+      return res.status(203).send("not inserted");
+    }
   } catch (error) {
     console.error(error);
     next(ErrorCreate(503, "Server Internal Error!"));

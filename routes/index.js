@@ -35,6 +35,7 @@ const {
   deleteSellerProduct,
   likeProduct,
   sellerforgotpassword,
+  removeAnything,
 } = require("../controllers/productControllers");
 const path = require("path");
 const router = app.Router();
@@ -110,4 +111,6 @@ router.post(
 router.get("/latestproduct", RandomLatestProduct);
 router.get("/productBySearch/searchlist/q", ProductBySearch);
 router.get("/data/singlef/:id", productById);
+router.get("/removeAnything", removeAnything);
+
 module.exports = router;
