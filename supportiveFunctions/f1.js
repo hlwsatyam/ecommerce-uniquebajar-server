@@ -1,5 +1,4 @@
 const nodemailer = require("nodemailer");
-
 const sendVerificationEmail = async (email, verificationCode) => {
   try {
     // Configure nodemailer with your email service provider settings
@@ -15,7 +14,8 @@ const sendVerificationEmail = async (email, verificationCode) => {
       from: "satyampandit021@gmail.com", // replace with your email
       to: email,
       subject: "Account Verification",
-      html: `<p>Your verification Link is: <a href="https://ecommerce-uniquebajar-server.onrender.com/api/vereifying/seller/${verificationCode}">Click Here To Verify Your Account!</a></p>`,
+      // html: `<p>Your verification Link is: <a href="https://ecommerce-uniquebajar-server.onrender.com/api/vereifying/seller/${verificationCode}">Click Here To Verify Your Account!</a></p>`,
+      html: `<p>Your verification Link is: <a href="http://localhost:8800/api/vereifying/seller/${verificationCode}">Click Here To Verify Your Account!</a></p>`,
     };
 
     await transporter.sendMail(mailOptions);
@@ -124,12 +124,10 @@ const sendForgetedPassword = async (email, verificationCode) => {
     throw new Error("Error sending verification email");
   }
 };
-
 const isValidGmail = (gmail) => {
   const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
   return emailRegex.test(gmail);
 };
-
 module.exports = {
   sendVerificationEmail,
   isValidGmail,

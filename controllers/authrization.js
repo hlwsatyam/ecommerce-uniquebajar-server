@@ -8,7 +8,7 @@ const authenticateMiddleware = async (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
+    res.status(203).json({ message: "Unauthorized" });
   }
 };
 const userAuthMobVerification = async (req, res, next) => {
@@ -16,7 +16,7 @@ const userAuthMobVerification = async (req, res, next) => {
   const api_key = "YZQmyIlOK5WC3YsnDVVeYJaFL0a7KyQ3";
   let jwt_response;
   let jwt_phone;
-  try { 
+  try {
     const decoded = jwt.verify(token, api_key, { algorithm: "HS256" });
     jwt_response = 1;
     jwt_phone = decoded.country_code + decoded.phone_no;
@@ -26,6 +26,7 @@ const userAuthMobVerification = async (req, res, next) => {
   }
   if (jwt_response == 1) {
     // Check if the user with the given phone number exists
+
     let [existingUser] = await DBconnection.query(
       "SELECT * FROM customer WHERE phone_number = ?",
       [jwt_phone]

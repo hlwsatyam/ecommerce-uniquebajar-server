@@ -12,6 +12,7 @@ const {
   CustomerDetails,
   sellerlogin,
   CustomerAddress,
+  customerPayment,
   CustomerProfileUpdate,
   CustomerNewAddressAdd,
   AddCommentOnProduct,
@@ -25,6 +26,7 @@ const {
   customerOrderList,
   CustomerOrderCancel,
   sellerOrderList,
+  customerPaymentStatus,
 } = require("../controllers/auth");
 const {
   uploadProduct,
@@ -36,12 +38,12 @@ const {
   likeProduct,
   sellerforgotpassword,
   removeAnything,
+  updateProduct,
 } = require("../controllers/productControllers");
 const path = require("path");
 const router = app.Router();
 // Set up storage for multer
 const parentDirectory = path.resolve(__dirname, "..");
-
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, `${parentDirectory}/uploads`);
@@ -51,7 +53,6 @@ const storage = multer.diskStorage({
     cb(null, uniqueFilename);
   },
 });
-
 const storageForProfile = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, `${parentDirectory}/images`);
@@ -61,7 +62,6 @@ const storageForProfile = multer.diskStorage({
     cb(null, uniqueFilename);
   },
 });
-
 const uploadsForProfile = multer({ storage: storageForProfile });
 const upload = multer({ storage: storage });
 router.get("/", helloWorld);
@@ -69,6 +69,7 @@ router.get("/vereifying/seller/:token", sellerVerifying);
 router.post("/login", login);
 router.post("/sellerlogin", sellerlogin);
 router.post("/seller/order/orderlist", sellerOrderList);
+router.post("/seller/product/:id", productById);
 router.post(
   "/sellercreate",
   uploadsForProfile.fields([
@@ -77,10 +78,13 @@ router.post(
   ]),
   sellerCreate
 );
+
 router.post("/customerMob/verification", userAuthMobVerification);
 router.post("/customer", CustomerDetails);
 router.post("/customer/updateProfile", CustomerProfileUpdate);
 router.post("/customer/whishlist", WishlistDetails);
+router.post("/customer/order/payment", customerPayment);
+router.post("/customer/order/paymentStatus", customerPaymentStatus);
 router.post("/customer/order/orderplace", customerOrderPlace);
 router.post("/customer/order/orderlist", customerOrderList);
 router.post("/customer/order/ordercancel", CustomerOrderCancel);
@@ -92,17 +96,25 @@ router.post("/product/addComment", AddCommentOnProduct);
 router.post("/product/review", ReviewOnProduct);
 router.post("/product/likeproduct", likeProduct);
 router.post("/seller/sellerforgotpassword", sellerforgotpassword);
-
 // router.post("/product/review", ReviewOnProduct);
-
 router.post("/newsletter/submit", SubscribeNewsletter);
+
 router.post(
   "/uploadProduct",
   upload.array("images", 50),
   authenticateMiddleware,
   uploadProduct
 );
+
+router.post(
+  "/updateProduct",
+  upload.array("images", 50),
+  authenticateMiddleware,
+  updateProduct
+);
+
 router.post("/seller/allproduct", authenticateMiddleware, allSellerProduct);
+
 router.post(
   "/seller/deleteproduct",
   authenticateMiddleware,
@@ -112,5 +124,4 @@ router.get("/latestproduct", RandomLatestProduct);
 router.get("/productBySearch/searchlist/q", ProductBySearch);
 router.get("/data/singlef/:id", productById);
 router.get("/removeAnything", removeAnything);
-
 module.exports = router;

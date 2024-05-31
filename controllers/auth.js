@@ -1,6 +1,7 @@
 const { ErrorCreate } = require("../createError/createError");
 const jwt = require("jsonwebtoken");
-
+var crypto = require("crypto");
+const axios = require("axios");
 const nodemailer = require("nodemailer");
 const {
   formatPhoneNumber,
@@ -12,6 +13,12 @@ const {
   verifyTokenWithoutPromise,
 } = require("../jsonWebToken/verifyToken");
 const { sendVerificationEmail } = require("../supportiveFunctions/f1");
+const {
+  validationForSellerCreate,
+} = require("../supportiveFunctions/validationForSellerCreate");
+
+let salt_key = "099eb0cd-02cf-4e2a-8aca-3e6c6aff0399";
+let merchant_id = "PGTESTPAYUAT";
 
 const helloWorld = async (req, res, next) => {
   try {
@@ -98,7 +105,13 @@ const sellerlogin = async (req, res, next) => {
     );
 
     if (existingUser.length > 0) {
-      // If the user exists, generate a token with their unique ID
+      // If the user exists, generate
+
+      if (existingUser[0].is_verified === 0) {
+        return res.status(203).json({ message: "Account not verified" });
+      }
+
+      // a token with their unique ID
       const token = jwt.sign(
         { id: existingUser[0].seller_id },
         process.env.JWT_SECRET_KEY,
@@ -109,11 +122,10 @@ const sellerlogin = async (req, res, next) => {
       return res.status(200).json({ token });
     } else {
       // User not found
-      return res.status(404).json({ error: "User Not Found" });
+      return res.status(203).json({ message: "Check Your Credentials!" });
     }
   } catch (error) {
-    console.error(error);
-    next(ErrorCreate(503, "Server Internal Error!"));
+    return res.status(203).json({ message: error?.message });
   }
 };
 
@@ -149,24 +161,19 @@ const WishlistDetails = async (req, res, next) => {
   let { token } = req.body;
   let customer_id;
 
-  jwt.verify(token, process.env.JWT_SECRET_KEY, (err, decoded) => {
-    if (err) {
-      return next(ErrorCreate(503, "Server Internal Error!"));
-    } else {
-      customer_id = decoded.id;
-    }
-  });
-
-  console.log(customer_id);
-
   try {
+    jwt.verify(token, process.env.JWT_SECRET_KEY, (err, decoded) => {
+      if (err) {
+        return next(ErrorCreate(503, "Server Internal Error!"));
+      } else {
+        customer_id = decoded.id;
+      }
+    });
     // Fetch wishlist details with associated product details
     let [wishlistDetails] = await DBconnection.query(
       "SELECT w.*, p.* FROM whishlist w INNER JOIN product p ON w.product_id = p.product_id WHERE w.customer_id = ?",
       [customer_id]
     );
-
-    console.log(wishlistDetails);
 
     if (wishlistDetails.length > 0) {
       return res.status(200).send(wishlistDetails);
@@ -174,8 +181,7 @@ const WishlistDetails = async (req, res, next) => {
       return res.status(200).send([]);
     }
   } catch (error) {
-    console.error(error);
-    next(ErrorCreate(503, "Server Internal Error!"));
+    next(ErrorCreate(203, "Server Internal Error!"));
   }
 };
 const customerOrderPlace = async (req, res, next) => {
@@ -234,63 +240,139 @@ const customerOrderPlace = async (req, res, next) => {
     next(ErrorCreate(503, "Server Internal Error!"));
   }
 };
-const customerOrderList = async (req, res, next) => {
+const customerPayment = async (req, res, next) => {
   try {
-    const { customerId } = req.body;
-    const decoded = await verifyCustomerToken(customerId);
-    const customer_id = decoded.id;
-    const connection = await DBconnection.getConnection();
-    try {
-      await connection.beginTransaction();
-      const queryOrders = `SELECT * FROM customer_order WHERE customer_id=?`;
-      const [ordersResult] = await connection.query(queryOrders, [customer_id]);
+    console.log(req.body);
 
-      // Fetch additional details for each order
-      const ordersDetails = await Promise.all(
-        ordersResult.map(async (order) => {
-          const { product_id, address_id, customer_id } = order;
+    const merchantTransactionId = req.body.transactionId;
 
-          // Fetch product details
-          const queryProduct = `SELECT * FROM product WHERE product_id=?`;
-          const [productResult] = await connection.query(queryProduct, [
-            product_id,
-          ]);
-          const queryCustomer = `SELECT * FROM customer WHERE customer_id=?`;
-          const [customerResult] = await connection.query(queryCustomer, [
-            customer_id,
-          ]);
+    const data = {
+      merchantId: merchant_id,
+      merchantTransactionId: merchantTransactionId,
+      merchantUserId: req.body.MUID,
+      name: req.body.name,
+      amount: req.body.amount * 100,
+      redirectUrl: `http://localhost:8800/api/customer/order/paymentStatus/?id=${merchantTransactionId}`,
+      redirectMode: "POST",
+      mobileNumber: req.body.number,
+      paymentInstrument: {
+        type: "PAY_PAGE",
+      },
+    };
+    const payload = JSON.stringify(data);
+    const payloadMain = Buffer.from(payload).toString("base64");
+    const keyIndex = 1;
+    const string = payloadMain + "/pg/v1/pay" + salt_key;
+    const sha256 = crypto.createHash("sha256").update(string).digest("hex");
+    const checksum = sha256 + "###" + keyIndex;
 
-          // Fetch address details
-          const queryAddress = `SELECT * FROM address WHERE address_id=?`;
-          const [addressResult] = await connection.query(queryAddress, [
-            address_id,
-          ]);
+    // const prod_URL = "https://api.phonepe.com/apis/hermes/pg/v1/pay"
+    const prod_URL =
+      "https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay";
 
-          return {
-            order,
-            product: productResult[0],
-            address: addressResult[0],
-            customer: customerResult[0],
-          };
-        })
-      );
+    const options = {
+      method: "POST",
+      url: prod_URL,
+      headers: {
+        accept: "application/json",
+        "Content-Type": "application/json",
+        "X-VERIFY": checksum,
+      },
+      data: {
+        request: payloadMain,
+      },
+    };
 
-      console.log(ordersDetails);
-
-      await connection.commit();
-      connection.release();
-      return res.status(200).json(ordersDetails);
-    } catch (error) {
-      await connection.rollback();
-      connection.release();
-      console.error("Error in customerOrderPlace:", error);
-      next(ErrorCreate(503, "Server Internal Error!"));
-    }
+    await axios(options)
+      .then(function (response) {
+        console.log(response.data);
+        return res.json(response.data);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   } catch (error) {
-    console.error("Error in customerOrderPlace:", error);
-    next(ErrorCreate(503, "Server Internal Error!"));
+    console.log(error);
+    res.status(500).send({
+      message: error.message,
+      success: false,
+    });
   }
 };
+const customerPaymentStatus = async (req, res, next) => {
+  async (req, res) => {
+    const merchantTransactionId = req.query.id;
+    const merchantId = merchant_id;
+
+    const keyIndex = 1;
+    const string =
+      `/pg/v1/status/${merchantId}/${merchantTransactionId}` + salt_key;
+    const sha256 = crypto.createHash("sha256").update(string).digest("hex");
+    const checksum = sha256 + "###" + keyIndex;
+
+    const options = {
+      method: "GET",
+      url: `https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/status/${merchantId}/${merchantTransactionId}`,
+      headers: {
+        accept: "application/json",
+        "Content-Type": "application/json",
+        "X-VERIFY": checksum,
+        "X-MERCHANT-ID": `${merchantId}`,
+      },
+    };
+
+    // CHECK PAYMENT TATUS
+    axios
+      .request(options)
+      .then(async (response) => {
+        if (response.data.success === true) {
+          const url = `http://localhost:5173/success`;
+          return res.redirect(url);
+        } else {
+          const url = `http://localhost:5173/failure`;
+          return res.redirect(url);
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  };
+};
+const customerOrderList = async (req, res, next) => {
+  try {
+    const { customerId, page = 1 } = req.body; // Assuming 'page' parameter is sent in the request
+    const decoded = await verifyCustomerToken(customerId);
+    const customer_id = decoded.id;
+
+    const connection = await DBconnection.getConnection();
+
+    await connection.beginTransaction();
+
+    const itemsPerPage = 5;
+    const offset = (page - 1) * itemsPerPage;
+
+    const query = `
+      SELECT co.*, p.*, a.*, c.*
+      FROM customer_order co
+      JOIN product p ON co.product_id = p.product_id
+      JOIN address a ON co.address_id = a.address_id
+      JOIN customer c ON co.customer_id = c.customer_id
+      WHERE co.customer_id = ?
+      LIMIT ?, ?
+    `;
+    
+    const [ordersDetails] = await connection.query(query, [
+      customer_id,
+      offset,
+      itemsPerPage,
+    ]);
+
+    return res.status(200).json(ordersDetails);
+  } catch (error) {
+    return res.status(203).json({ message: error.message });
+  }
+};
+
 const sellerOrderList = async (req, res, next) => {
   try {
     const { sellerToken } = req.body;
@@ -352,13 +434,11 @@ const sellerOrderList = async (req, res, next) => {
     next(ErrorCreate(503, "Server Internal Error!"));
   }
 };
-
 async function fetchAdditionalDetails(orderId) {
   // Implement logic to fetch additional details based on the orderId
   // For example, fetch products, customer details, etc.
   // Return the additional details
 }
-
 const verifyCustomerToken = (token) => {
   return new Promise((resolve, reject) => {
     jwt.verify(token, process.env.JWT_SECRET_KEY, (err, decoded) => {
@@ -374,16 +454,13 @@ const WishlistCheck = async (req, res, next) => {
   try {
     const { token, productId } = req.body;
     let customer_id;
-
     jwt.verify(token, process.env.JWT_SECRET_KEY, (err, decoded) => {
       if (err) {
-        return next(ErrorCreate(503, "Server Internal Error!"));
+        return res.status(203).json({ isInWishlist: false });
       } else {
         customer_id = decoded.id;
       }
     });
-
-    console.log(customer_id);
 
     // Check if the user has the product in the wishlist
     const [existingWishlist] = await DBconnection.query(
@@ -391,16 +468,13 @@ const WishlistCheck = async (req, res, next) => {
       [customer_id, productId]
     );
 
-    console.log(existingWishlist);
-
     if (existingWishlist.length > 0) {
-      return res.status(200).send({ isInWishlist: true });
+      return res.status(200).json({ isInWishlist: true });
     } else {
-      next(ErrorCreate(503, "Server Internal Error!"));
+      return res.status(203).json({ isInWishlist: false });
     }
   } catch (error) {
-    console.error(error);
-    next(ErrorCreate(503, "Server Internal Error!"));
+    return res.status(203).json({ isInWishlist: false });
   }
 };
 const CustomerOrderCancel = async (req, res, next) => {
@@ -439,46 +513,36 @@ const CustomerOrderCancel = async (req, res, next) => {
 const WishlistUpdate = async (req, res, next) => {
   try {
     const { token, productId } = req.body;
-
     let customer_id;
     jwt.verify(token, process.env.JWT_SECRET_KEY, (err, decoded) => {
       if (err) {
-        return next(ErrorCreate(503, "Server Internal Error!"));
+        return res.status(203).json({ isInWishlist: false });
       } else {
         customer_id = decoded.id;
       }
     });
-
-    console.log(customer_id);
-
     const [existingWishlist] = await DBconnection.query(
       "SELECT * FROM whishlist WHERE product_id=? AND customer_id=?",
       [productId, customer_id]
     );
-
-    console.log(existingWishlist);
-
     if (existingWishlist.length > 0) {
       await DBconnection.query(
         "DELETE FROM whishlist WHERE product_id=? AND customer_id=?",
         [productId, customer_id]
       );
-      return res.status(200).send("whishlist item removed");
+      return res.status(200).json({ isInWishlist: false });
     } else {
       await DBconnection.query(
         "INSERT INTO whishlist SET product_id=?, customer_id=?",
         [productId, customer_id]
       );
-      return res.status(200).send("whishlist item added");
+      return res.status(200).json({ isInWishlist: true });
     }
   } catch (error) {
-    console.error(error);
-    next(ErrorCreate(503, "Server Internal Error!"));
+    return res.status(203).json({ isInWishlist: false });
   }
 };
-
 module.exports = WishlistUpdate;
-
 const CustomerProfileUpdate = async (req, res, next) => {
   let { token, latestUserData } = req.body;
   let customer_id;
@@ -633,9 +697,6 @@ const CustomerAddress = async (req, res, next) => {
       "SELECT * FROM address WHERE customer_id = ?",
       [customer_id]
     );
-
-    console.log(existingAddress);
-
     return res.status(200).send(existingAddress);
   } catch (error) {
     console.error(error);
@@ -650,6 +711,7 @@ const sellerCreate = async (req, res, next) => {
       companyName,
       yourName,
       password,
+      category,
       confirmPassword,
       contactNumber,
       address,
@@ -657,31 +719,41 @@ const sellerCreate = async (req, res, next) => {
       storeName,
       storeDescription,
     } = req.body;
-    console.log(email);
+    // Get filenames from file uploads or set to null if not provided
+    const shopImageFilename = req.files?.["shopImage"]?.[0]?.filename || "";
+    const storeLogoFilename = req.files?.["storeLogo"]?.[0]?.filename || "";
+
+    const { message, status } = validationForSellerCreate(
+      email,
+      companyName,
+      yourName,
+      password,
+      confirmPassword,
+      contactNumber,
+      address,
+      cin,
+      category,
+      storeName,
+      storeDescription,
+      storeLogoFilename,
+      shopImageFilename
+    );
+    if (status !== 200) {
+      return res.status(status).json({ message });
+    }
     // Check if the seller already exists
     const [existingUser] = await DBconnection.query(
       "SELECT * FROM seller WHERE email = ?",
       [email]
     );
-
     if (existingUser.length > 0) {
-      return res.status(400).json({ message: "Seller already exists" });
+      return res.status(203).json({ message: "Seller already exists" });
     }
-
-    // Check if the passwords match
-    if (password !== confirmPassword) {
-      return next(ErrorCreate(403, "Passwords do not match"));
-    }
-
-    // Get filenames from file uploads or set to null if not provided
-    const shopImageFilename = req.files?.["shopImage"]?.[0]?.filename || "";
-    const storeLogoFilename = req.files?.["storeLogo"]?.[0]?.filename || "";
-
     // Insert seller data into the database
     const [insertResult] = await DBconnection.execute(
       `INSERT INTO seller (seller_name, email, password, seller_contact, compony_name, 
         address, cin, shop_img, store_name, store_description, store_logo) ` +
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "VALUES (?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?)",
       [
         yourName,
         email,
@@ -689,6 +761,7 @@ const sellerCreate = async (req, res, next) => {
         contactNumber,
         companyName,
         address,
+
         cin,
         shopImageFilename,
         storeName,
@@ -705,17 +778,7 @@ const sellerCreate = async (req, res, next) => {
         expiresIn: "1y",
       }
     );
-    // try {
-    //   await sendVerificationEmail(email, sellerToken);
-    // } catch (error) {
-    //   await DBconnection.execute(`remove seller where email =?`, [email]);
-    //   next(ErrorCreate(503, "Something Went Worng!"));
-    // }
 
-    // res.status(200).json({
-    //   message: "Seller created successfully",
-    //   sellerId,
-    // });
     try {
       await sendVerificationEmail(email, sellerToken);
       res.status(200).json({
@@ -724,16 +787,17 @@ const sellerCreate = async (req, res, next) => {
       });
     } catch (error) {
       // If there is an error sending the email, remove the seller from the database
-      await DBconnection.execute(`DELETE FROM seller WHERE email = ?`, [email]);
-      console.error("Error sending verification email:", error);
-      res.status(503).json({
+      // await DBconnection.execute(`DELETE FROM seller WHERE email = ?`, [email]);
+      console.log("Error sending verification email:", error);
+      res.status(203).json({
         message: "Failed to send verification email",
         error: error.message,
       });
     }
   } catch (error) {
-    console.error(error);
-    next(ErrorCreate(503, "Server Internal Error!"));
+    res.status(203).json({
+      message: error?.message,
+    });
   }
 };
 
@@ -750,6 +814,8 @@ module.exports = {
   WishlistDetails,
   WishlistUpdate,
   WishlistCheck,
+  customerPayment,
+  customerPaymentStatus,
   sellerVerifying,
   sellerlogin,
   SubscribeNewsletter,
