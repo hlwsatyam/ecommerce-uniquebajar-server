@@ -84,7 +84,10 @@ router.post("/customer", CustomerDetails);
 router.post("/customer/updateProfile", CustomerProfileUpdate);
 router.post("/customer/whishlist", WishlistDetails);
 router.post("/customer/order/payment", customerPayment);
-router.post("/customer/order/paymentStatus", customerPaymentStatus);
+router.post(
+  "/customer/order/paymentStatus/status/:txnId",
+  customerPaymentStatus
+);
 router.post("/customer/order/orderplace", customerOrderPlace);
 router.post("/customer/order/orderlist", customerOrderList);
 router.post("/customer/order/ordercancel", CustomerOrderCancel);

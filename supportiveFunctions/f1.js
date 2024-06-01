@@ -1,4 +1,6 @@
 const nodemailer = require("nodemailer");
+
+const crypto = require("crypto");
 const sendVerificationEmail = async (email, verificationCode) => {
   try {
     // Configure nodemailer with your email service provider settings
@@ -128,8 +130,18 @@ const isValidGmail = (gmail) => {
   const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
   return emailRegex.test(gmail);
 };
+
+// Function to generate X-VERIFY header
+const generateChecksum = (payloadMain, endpoint, salt_key) => {
+  const keyIndex = 1;
+  const string = payloadMain + endpoint + salt_key;
+  const sha256 = crypto.createHash("sha256").update(string).digest("hex");
+  return sha256 + "###" + keyIndex;
+};
+
 module.exports = {
   sendVerificationEmail,
   isValidGmail,
+  generateChecksum,
   sendForgetedPassword,
 };

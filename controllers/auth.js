@@ -12,13 +12,16 @@ const {
   verifyTokenWithouPromise,
   verifyTokenWithoutPromise,
 } = require("../jsonWebToken/verifyToken");
-const { sendVerificationEmail } = require("../supportiveFunctions/f1");
+const {
+  sendVerificationEmail,
+  generateChecksum,
+} = require("../supportiveFunctions/f1");
 const {
   validationForSellerCreate,
 } = require("../supportiveFunctions/validationForSellerCreate");
 
-let salt_key = "099eb0cd-02cf-4e2a-8aca-3e6c6aff0399";
-let merchant_id = "PGTESTPAYUAT";
+const salt_key = "15abdc27-e20b-414e-ba7c-a3ec3b2db4d6";
+const merchant_id = "RVBMONLINE";
 
 const helloWorld = async (req, res, next) => {
   try {
@@ -242,37 +245,28 @@ const customerOrderPlace = async (req, res, next) => {
 };
 const customerPayment = async (req, res, next) => {
   try {
-    console.log(req.body);
-
-    const merchantTransactionId = req.body.transactionId;
+    const { transactionId, MUID, name, amount, number } = req.body;
 
     const data = {
       merchantId: merchant_id,
-      merchantTransactionId: merchantTransactionId,
-      merchantUserId: req.body.MUID,
-      name: req.body.name,
-      amount: req.body.amount * 100,
-      redirectUrl: `http://localhost:8800/api/customer/order/paymentStatus/?id=${merchantTransactionId}`,
+      merchantTransactionId: transactionId,
+      merchantUserId: MUID,
+      name: name,
+      amount: amount * 100, // Amount in paise
+      redirectUrl: `http://localhost:8800/api/customer/order/paymentStatus/status/${transactionId}`,
       redirectMode: "POST",
-      mobileNumber: req.body.number,
+      mobileNumber: number,
       paymentInstrument: {
         type: "PAY_PAGE",
       },
     };
     const payload = JSON.stringify(data);
     const payloadMain = Buffer.from(payload).toString("base64");
-    const keyIndex = 1;
-    const string = payloadMain + "/pg/v1/pay" + salt_key;
-    const sha256 = crypto.createHash("sha256").update(string).digest("hex");
-    const checksum = sha256 + "###" + keyIndex;
-
-    // const prod_URL = "https://api.phonepe.com/apis/hermes/pg/v1/pay"
-    const prod_URL =
-      "https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay";
+    const checksum = generateChecksum(payloadMain, "/pg/v1/pay", salt_key);
 
     const options = {
       method: "POST",
-      url: prod_URL,
+      url: "https://api.phonepe.com/apis/hermes/pg/v1/pay",
       headers: {
         accept: "application/json",
         "Content-Type": "application/json",
@@ -282,61 +276,51 @@ const customerPayment = async (req, res, next) => {
         request: payloadMain,
       },
     };
-
-    await axios(options)
-      .then(function (response) {
-        console.log(response.data);
-        return res.json(response.data);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+    const response = await axios.request(options);
+    if (response.data.success) {
+      res.json(response.data.data.instrumentResponse.redirectInfo.url);
+    } else {
+      res
+        .status(400)
+        .json({ success: false, message: "Payment initiation failed" });
+    }
   } catch (error) {
-    console.log(error);
-    res.status(500).send({
-      message: error.message,
-      success: false,
-    });
+    console.error(error);
+    res.status(500).json({ message: error.message, success: false });
   }
 };
 const customerPaymentStatus = async (req, res, next) => {
-  async (req, res) => {
-    const merchantTransactionId = req.query.id;
-    const merchantId = merchant_id;
+  try {
+    const { txnId } = req.params;
 
-    const keyIndex = 1;
-    const string =
-      `/pg/v1/status/${merchantId}/${merchantTransactionId}` + salt_key;
-    const sha256 = crypto.createHash("sha256").update(string).digest("hex");
-    const checksum = sha256 + "###" + keyIndex;
+    const checksum = generateChecksum(
+      "",
+      `/pg/v1/status/${merchant_id}/${txnId}`,
+      salt_key
+    );
 
     const options = {
       method: "GET",
-      url: `https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/status/${merchantId}/${merchantTransactionId}`,
+      url: `https://api.phonepe.com/apis/hermes/pg/v1/status/${merchant_id}/${txnId}`,
       headers: {
         accept: "application/json",
         "Content-Type": "application/json",
         "X-VERIFY": checksum,
-        "X-MERCHANT-ID": `${merchantId}`,
+        "X-MERCHANT-ID": merchant_id,
       },
     };
 
-    // CHECK PAYMENT TATUS
-    axios
-      .request(options)
-      .then(async (response) => {
-        if (response.data.success === true) {
-          const url = `http://localhost:5173/success`;
-          return res.redirect(url);
-        } else {
-          const url = `http://localhost:5173/failure`;
-          return res.redirect(url);
-        }
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  };
+    const response = await axios.request(options);
+
+    if (response.data.success) {
+      res.redirect("http://localhost:3000/success");
+    } else {
+      res.redirect("http://localhost:3000/failure");
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message, success: false });
+  }
 };
 const customerOrderList = async (req, res, next) => {
   try {
@@ -360,7 +344,7 @@ const customerOrderList = async (req, res, next) => {
       WHERE co.customer_id = ?
       LIMIT ?, ?
     `;
-    
+
     const [ordersDetails] = await connection.query(query, [
       customer_id,
       offset,
@@ -372,7 +356,6 @@ const customerOrderList = async (req, res, next) => {
     return res.status(203).json({ message: error.message });
   }
 };
-
 const sellerOrderList = async (req, res, next) => {
   try {
     const { sellerToken } = req.body;
