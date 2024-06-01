@@ -253,7 +253,7 @@ const customerPayment = async (req, res, next) => {
       merchantUserId: MUID,
       name: name,
       amount: amount * 100, // Amount in paise
-      redirectUrl: `http://localhost:8800/api/customer/order/paymentStatus/status/${transactionId}`,
+      redirectUrl: `https://ecommerce-uniquebajar-server.onrender.com/api/customer/order/paymentStatus/status/${transactionId}`,
       redirectMode: "POST",
       mobileNumber: number,
       paymentInstrument: {
@@ -313,9 +313,9 @@ const customerPaymentStatus = async (req, res, next) => {
     const response = await axios.request(options);
 
     if (response.data.success) {
-      res.redirect("http://localhost:3000/success");
+      res.redirect("https://uniquebajar.com");
     } else {
-      res.redirect("http://localhost:3000/failure");
+      res.redirect("https://uniquebajar.com/customer/profile");
     }
   } catch (error) {
     console.error(error);

@@ -101,7 +101,6 @@ router.post("/product/likeproduct", likeProduct);
 router.post("/seller/sellerforgotpassword", sellerforgotpassword);
 // router.post("/product/review", ReviewOnProduct);
 router.post("/newsletter/submit", SubscribeNewsletter);
-
 router.post(
   "/uploadProduct",
   upload.array("images", 50),
