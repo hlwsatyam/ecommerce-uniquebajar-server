@@ -14,5 +14,4 @@ DBconnection.getConnection()
   .catch((err) => {
     console.error("Error connecting to MySQL:", err);
   });
-
 module.exports = { DBconnection };

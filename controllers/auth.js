@@ -1,8 +1,9 @@
 const { ErrorCreate } = require("../createError/createError");
 const jwt = require("jsonwebtoken");
 var crypto = require("crypto");
+const { v4: uuidv4 } = require("uuid");
 const axios = require("axios");
-const nodemailer = require("nodemailer");
+
 const {
   formatPhoneNumber,
 } = require("../supportiveFunction/controllerSupport");
@@ -19,6 +20,9 @@ const {
 const {
   validationForSellerCreate,
 } = require("../supportiveFunctions/validationForSellerCreate");
+
+// const salt_key = "45c47b54-4922-4050-b4e6-cf9afb42ddfb";
+// const merchant_id = "RVBMUNIUAT";
 
 const salt_key = "15abdc27-e20b-414e-ba7c-a3ec3b2db4d6";
 const merchant_id = "RVBMONLINE";
@@ -191,61 +195,71 @@ const customerOrderPlace = async (req, res, next) => {
   try {
     const { productDetails, customerId, DeleveryAddress } = req.body;
     const allProductForOrder = JSON.parse(productDetails);
-
     const decoded = await verifyCustomerToken(customerId);
     const customer_id = decoded.id;
-
     const connection = await DBconnection.getConnection();
-
     try {
       await connection.beginTransaction();
-
+      const orderIds = [];
       for (const product of allProductForOrder) {
         const currentDate = new Date();
-
-        // Add 7 days to the current date
         const reachingTime = new Date(
           currentDate.getTime() + 7 * 24 * 60 * 60 * 1000
         );
-
         const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, "0"); // Adding 1 because getMonth() returns zero-based month
+        const month = String(currentDate.getMonth() + 1).padStart(2, "0");
         const day = String(currentDate.getDate()).padStart(2, "0");
         const formattedDate = `${year}-${month}-${day}`;
-        console.log(formattedDate);
-
+        const uniqueOrderId = uuidv4();
         const query = `
           INSERT INTO customer_order 
-          SET product_id=?,product_count=?,  customer_id=?, address_id=?,order_date=?, reaching_time=?
+          (product_id, product_count, customer_id, address_id, order_date, reaching_time, delivery_status, reason, IsPaymentDone, unique_random_id)
+          VALUES (?, ?, ?, ?, ?, ?, 'Pending', '', 0, ?)
         `;
-
+        // Insert the order into the database
         await connection.query(query, [
           product.id,
           product.count,
           customer_id,
           DeleveryAddress,
           formattedDate,
-          reachingTime,
+          reachingTime.toISOString().slice(0, 19).replace("T", " "),
+          uniqueOrderId,
         ]);
+        // Retrieve the order_id associated with the unique_random_id
+        const orderQuery = `
+          SELECT order_id FROM customer_order WHERE unique_random_id = ?
+        `;
+        const [orderDetails] = await connection.query(orderQuery, [
+          uniqueOrderId,
+        ]);
+        orderIds.push(orderDetails[0].order_id);
       }
-
       await connection.commit();
-      connection.release();
-      return res.status(200).send("Order Processed!");
+      return res
+        .status(200)
+        .json({ message: "Order Placed Successfully", orderIds });
     } catch (error) {
       await connection.rollback();
+      return res
+        .status(203)
+        .json({ message: error.message || "Something Went Wrong!" });
+    } finally {
       connection.release();
-      console.error("Error in customerOrderPlace:", error);
-      next(ErrorCreate(503, "Server Internal Error!"));
     }
   } catch (error) {
-    console.error("Error in customerOrderPlace:", error);
-    next(ErrorCreate(503, "Server Internal Error!"));
+    return res
+      .status(203)
+      .json({ message: error.message || "Something Went Wrong!" });
   }
 };
 const customerPayment = async (req, res, next) => {
   try {
-    const { transactionId, MUID, name, amount, number } = req.body;
+    const { transactionId, orderIds, MUID, name, amount, number } = req.body;
+    if (!orderIds?.lenght || orderIds.length <= 0)
+      return res
+        .status(400)
+        .json({ success: false, message: "Payment failed" });
 
     const data = {
       merchantId: merchant_id,
@@ -253,7 +267,8 @@ const customerPayment = async (req, res, next) => {
       merchantUserId: MUID,
       name: name,
       amount: amount * 100, // Amount in paise
-      redirectUrl: `https://ecommerce-uniquebajar-server.onrender.com/api/customer/order/paymentStatus/status/${transactionId}`,
+      // redirectUrl: `https://ecommerce-uniquebajar-server.onrender.com/api/customer/order/paymentStatus/status/${transactionId}`,
+      redirectUrl: `http://localhost:8800/api/customer/order/paymentStatus/status/${transactionId}`,
       redirectMode: "POST",
       mobileNumber: number,
       paymentInstrument: {
@@ -290,6 +305,7 @@ const customerPayment = async (req, res, next) => {
   }
 };
 const customerPaymentStatus = async (req, res, next) => {
+  console.log(req.body);
   try {
     const { txnId } = req.params;
 
@@ -301,6 +317,7 @@ const customerPaymentStatus = async (req, res, next) => {
 
     const options = {
       method: "GET",
+      // url: `https://api.preprod.phonepe.com/apis/hermes/pg/v1/status/${merchant_id}/${txnId}`,
       url: `https://api.phonepe.com/apis/hermes/pg/v1/status/${merchant_id}/${txnId}`,
       headers: {
         accept: "application/json",
@@ -309,13 +326,13 @@ const customerPaymentStatus = async (req, res, next) => {
         "X-MERCHANT-ID": merchant_id,
       },
     };
-
     const response = await axios.request(options);
-
     if (response.data.success) {
       res.redirect("https://uniquebajar.com");
+      // res.redirect("http://localhost:3000/");
     } else {
       res.redirect("https://uniquebajar.com/customer/profile");
+      // res.redirect("http://localhost:3000/checkout/cart");
     }
   } catch (error) {
     console.error(error);
@@ -525,7 +542,6 @@ const WishlistUpdate = async (req, res, next) => {
     return res.status(203).json({ isInWishlist: false });
   }
 };
-module.exports = WishlistUpdate;
 const CustomerProfileUpdate = async (req, res, next) => {
   let { token, latestUserData } = req.body;
   let customer_id;
@@ -561,7 +577,6 @@ const CustomerProfileUpdate = async (req, res, next) => {
     next(ErrorCreate(503, "Server Internal Error!"));
   }
 };
-
 const CustomerNewAddressAdd = async (req, res, next) => {
   let { token, addressData } = req.body;
   let customer_id;
@@ -662,7 +677,6 @@ const SubscribeNewsletter = async (req, res, next) => {
     next(ErrorCreate(503, "Server Internal Error!"));
   }
 };
-
 const CustomerAddress = async (req, res, next) => {
   let { token } = req.body;
   let customer_id;
@@ -686,7 +700,6 @@ const CustomerAddress = async (req, res, next) => {
     next(ErrorCreate(503, "Server Internal Error!"));
   }
 };
-
 const sellerCreate = async (req, res, next) => {
   try {
     const {

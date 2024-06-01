@@ -6,9 +6,6 @@ const router = require("./routes");
 
 const { ErrorController } = require("./createError/createError");
 require("./config/db");
-const { insertMultipleData } = require("./Data/InsertData/InsertData");
-const fs = require("fs").promises;
-const mysql = require("mysql2/promise");
 
 require("dotenv").config({ path: "./.env" });
 require("./config/db");
@@ -19,8 +16,6 @@ const app = express();
 app.use(cors());
 app.use("/uploads", express.static("uploads"));
 app.use(express.json());
-
-// insertMultipleData()
 
 // Routes
 app.use("/api", router);
