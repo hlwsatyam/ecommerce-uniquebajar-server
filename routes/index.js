@@ -99,7 +99,6 @@ router.post("/product/addComment", AddCommentOnProduct);
 router.post("/product/review", ReviewOnProduct);
 router.post("/product/likeproduct", likeProduct);
 router.post("/seller/sellerforgotpassword", sellerforgotpassword);
-// router.post("/product/review", ReviewOnProduct);
 router.post("/newsletter/submit", SubscribeNewsletter);
 router.post(
   "/uploadProduct",

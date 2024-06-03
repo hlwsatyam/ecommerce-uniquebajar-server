@@ -10,7 +10,7 @@ require("./config/db");
 require("dotenv").config({ path: "./.env" });
 require("./config/db");
 const app = express();
-
+     
 // Middleware
 // app.use(bodyParser.json());
 app.use(cors());

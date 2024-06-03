@@ -21,12 +21,15 @@ const {
   validationForSellerCreate,
 } = require("../supportiveFunctions/validationForSellerCreate");
 
+// const salt_key = "099eb0cd-02cf-4e2a-8aca-3e6c6aff0399";
+// const merchant_id = "PGTESTPAYUAT";
+
 // const salt_key = "45c47b54-4922-4050-b4e6-cf9afb42ddfb";
 // const merchant_id = "RVBMUNIUAT";
 
-const salt_key = "15abdc27-e20b-414e-ba7c-a3ec3b2db4d6";
-const merchant_id = "RVBMONLINE";
-
+ const salt_key = "15abdc27-e20b-414e-ba7c-a3ec3b2db4d6";
+ const merchant_id = "RVBMONLINE";
+ 
 const helloWorld = async (req, res, next) => {
   try {
     res.status(200).send("Helo World!");
@@ -256,10 +259,6 @@ const customerOrderPlace = async (req, res, next) => {
 const customerPayment = async (req, res, next) => {
   try {
     const { transactionId, orderIds, MUID, name, amount, number } = req.body;
-    if (!orderIds?.lenght || orderIds.length <= 0)
-      return res
-        .status(400)
-        .json({ success: false, message: "Payment failed" });
 
     const data = {
       merchantId: merchant_id,
@@ -267,8 +266,8 @@ const customerPayment = async (req, res, next) => {
       merchantUserId: MUID,
       name: name,
       amount: amount * 100, // Amount in paise
-      // redirectUrl: `https://ecommerce-uniquebajar-server.onrender.com/api/customer/order/paymentStatus/status/${transactionId}`,
-      redirectUrl: `http://localhost:8800/api/customer/order/paymentStatus/status/${transactionId}`,
+    redirectUrl: `https://ecommerce-uniquebajar-server.onrender.com/api/customer/order/paymentStatus/status/${transactionId}`,
+       //  redirectUrl: `http://localhost:8800/api/customer/order/paymentStatus/status/${transactionId}`,
       redirectMode: "POST",
       mobileNumber: number,
       paymentInstrument: {
@@ -281,7 +280,8 @@ const customerPayment = async (req, res, next) => {
 
     const options = {
       method: "POST",
-      url: "https://api.phonepe.com/apis/hermes/pg/v1/pay",
+  url: "https://api.phonepe.com/apis/hermes/pg/v1/pay",
+        //   url: "https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay",
       headers: {
         accept: "application/json",
         "Content-Type": "application/json",
@@ -305,7 +305,7 @@ const customerPayment = async (req, res, next) => {
   }
 };
 const customerPaymentStatus = async (req, res, next) => {
-  console.log(req.body);
+  console.log(res.req.body);
   try {
     const { txnId } = req.params;
 
@@ -314,11 +314,10 @@ const customerPaymentStatus = async (req, res, next) => {
       `/pg/v1/status/${merchant_id}/${txnId}`,
       salt_key
     );
-
     const options = {
       method: "GET",
-      // url: `https://api.preprod.phonepe.com/apis/hermes/pg/v1/status/${merchant_id}/${txnId}`,
-      url: `https://api.phonepe.com/apis/hermes/pg/v1/status/${merchant_id}/${txnId}`,
+    url: `https://api.phonepe.com/apis/hermes/pg/v1/status/${merchant_id}/${txnId}`,
+        // url: `https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/status/${merchant_id}/${txnId}`,
       headers: {
         accept: "application/json",
         "Content-Type": "application/json",
@@ -328,10 +327,10 @@ const customerPaymentStatus = async (req, res, next) => {
     };
     const response = await axios.request(options);
     if (response.data.success) {
-      res.redirect("https://uniquebajar.com");
+      res.redirect("https://uniquebajar.com/customer/profile");
       // res.redirect("http://localhost:3000/");
     } else {
-      res.redirect("https://uniquebajar.com/customer/profile");
+      res.redirect("https://uniquebajar.com/checkout/cart");
       // res.redirect("http://localhost:3000/checkout/cart");
     }
   } catch (error) {
@@ -509,7 +508,6 @@ const CustomerOrderCancel = async (req, res, next) => {
     next(ErrorCreate(503, "Server Internal Error!"));
   }
 };
-
 const WishlistUpdate = async (req, res, next) => {
   try {
     const { token, productId } = req.body;
@@ -649,20 +647,23 @@ const AddCommentOnProduct = async (req, res, next) => {
     next(ErrorCreate(503, "Server Internal Error!"));
   }
 };
+
+
 const ReviewOnProduct = async (req, res, next) => {
   let { product_no } = req.body;
   try {
     let [result] = await DBconnection.query(
       "SELECT r.*, CONCAT(c.first_name, ' ', c.last_name) AS customer_name FROM review r INNER JOIN customer c ON r.customer_id = c.customer_id WHERE r.product_id = ?",
       [product_no]
-    );
-
+    ); 
     return res.status(200).json(result);
   } catch (error) {
-    console.error(error);
-    next(ErrorCreate(503, "Server Internal Error!"));
+    return res.status(203).json({message:error?.err||'Something Went Worng'});
+     
   }
 };
+
+
 const SubscribeNewsletter = async (req, res, next) => {
   let { email } = req.body;
   try {
@@ -796,7 +797,6 @@ const sellerCreate = async (req, res, next) => {
     });
   }
 };
-
 module.exports = {
   CustomerProfileUpdate,
   CustomerDetails,

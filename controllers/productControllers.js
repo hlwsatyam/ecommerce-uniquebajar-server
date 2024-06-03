@@ -315,15 +315,15 @@ const productById = async (req, res, next) => {
     );
     if (productResult.length === 0) {
       return res.status(203).json({ message: "Product not found" });
-    }
+    } 
     const product = productResult[0];
-    res.status(200).send(product);
+  return  res.status(200).send(product);
   } catch (error) {
     return res.status(203).json({ message: "Something Went Wrong!" });
   }
 };
 const ProductBySearch = async (req, res, next) => {
-  try {
+  try { 
     const {
       query: searchableText,
       page = 1,
@@ -402,19 +402,18 @@ const RandomLatestProduct = async (req, res, next) => {
   try {
     let totalProductsQuery;
     let totalProducts;
-
-    if (sub_category) {
-      console.log(sub_category);
+    if (sub_category !="undefined") {
+      console.log(`sub-category is ${sub_category}`);
       totalProductsQuery = `SELECT COUNT(*) as total FROM product WHERE subcategory_name = ?;`;
       const [totalProductsResult] = await DBconnection.execute(
         totalProductsQuery,
         [sub_category]
-      );
+      ); 
       totalProducts = totalProductsResult[0].total;
     }
-
-    if (category) {
-      totalProductsQuery = `SELECT COUNT(*) as total FROM product WHERE category_name = ?;`;
+    if(category!='undefined'){
+    console.log(`category is ${category}`);
+    totalProductsQuery = `SELECT COUNT(*) as total FROM product WHERE category_name = ?;`;
       const [totalProductsResult] = await DBconnection.execute(
         totalProductsQuery,
         [category]
@@ -431,18 +430,14 @@ const RandomLatestProduct = async (req, res, next) => {
       LIMIT ${pageSize}
       OFFSET ${randomOffset};
     `;
-
     const [productResult] = await DBconnection.execute(query, [category]);
-
     if (productResult.length === 0) {
       return res.status(404).json({ message: "Products not found" });
     }
-
     const products = productResult;
     res.status(200).send(products);
   } catch (error) {
-    console.error(error);
-    next({ status: 500, message: "Internal Server Error" });
+    res.status(203).json({message:"Something Went Worng"})
   }
 };
 const removeAnything = async (req, res, next) => {
