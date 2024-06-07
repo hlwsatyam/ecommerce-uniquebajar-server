@@ -1,6 +1,6 @@
 const { ErrorCreate } = require("../createError/createError");
 const jwt = require("jsonwebtoken");
-var crypto = require("crypto");
+ 
 const { v4: uuidv4 } = require("uuid");
 const axios = require("axios");
 
@@ -267,7 +267,7 @@ const customerPayment = async (req, res, next) => {
       name: name,
       amount: amount * 100, // Amount in paise
     redirectUrl: `https://ecommerce-uniquebajar-server.onrender.com/api/customer/order/paymentStatus/status/${transactionId}`,
-       //  redirectUrl: `http://localhost:8800/api/customer/order/paymentStatus/status/${transactionId}`,
+        // redirectUrl: `http://localhost:8800/api/customer/order/paymentStatus/status/${transactionId}`,
       redirectMode: "POST",
       mobileNumber: number,
       paymentInstrument: {
@@ -281,7 +281,7 @@ const customerPayment = async (req, res, next) => {
     const options = {
       method: "POST",
   url: "https://api.phonepe.com/apis/hermes/pg/v1/pay",
-        //   url: "https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay",
+          // url: "https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay",
       headers: {
         accept: "application/json",
         "Content-Type": "application/json",
@@ -327,11 +327,11 @@ const customerPaymentStatus = async (req, res, next) => {
     };
     const response = await axios.request(options);
     if (response.data.success) {
-      res.redirect("https://uniquebajar.com/customer/profile");
+      res.redirect("https://uniquebajar.com/payment-success");
       // res.redirect("http://localhost:3000/");
     } else {
-      res.redirect("https://uniquebajar.com/checkout/cart");
-      // res.redirect("http://localhost:3000/checkout/cart");
+      res.redirect("https://uniquebajar.com/payment-failed");
+      // res.redirect("http://localhost:3000/payment-failed");
     }
   } catch (error) {
     console.error(error);
@@ -431,6 +431,25 @@ const sellerOrderList = async (req, res, next) => {
   } catch (error) {
     console.error("Error in sellerOrderList:", error);
     next(ErrorCreate(503, "Server Internal Error!"));
+  }
+};
+const sellerOrderDetails = async (req, res, next) => {
+  try {
+    const { sellerToken, page, rowsPerPage } = req.body;
+    const decoded = await verifyCustomerToken(sellerToken);
+    const seller_id = decoded?.id;
+    const offset = (page - 1) * rowsPerPage;
+    const connection = await DBconnection.getConnection();
+    const queryProduct = `SELECT customer_order.* 
+    FROM customer_order 
+    INNER JOIN product ON customer_order.product_id = product.product_id
+    WHERE product.seller_id = ?`;
+    const [productResult] = await connection.query(queryProduct, [
+      seller_id,
+    ]);
+    return res.status(200).json({ data: productResult });
+  } catch (error) {
+    return res.status(203).json({ message: error.message });
   }
 };
 async function fetchAdditionalDetails(orderId) {
@@ -647,8 +666,6 @@ const AddCommentOnProduct = async (req, res, next) => {
     next(ErrorCreate(503, "Server Internal Error!"));
   }
 };
-
-
 const ReviewOnProduct = async (req, res, next) => {
   let { product_no } = req.body;
   try {
@@ -662,8 +679,6 @@ const ReviewOnProduct = async (req, res, next) => {
      
   }
 };
-
-
 const SubscribeNewsletter = async (req, res, next) => {
   let { email } = req.body;
   try {
@@ -800,7 +815,7 @@ const sellerCreate = async (req, res, next) => {
 module.exports = {
   CustomerProfileUpdate,
   CustomerDetails,
-  helloWorld,
+  helloWorld,sellerOrderDetails,
   CustomerAddress,
   login,
   AddCommentOnProduct,

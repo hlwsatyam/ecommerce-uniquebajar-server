@@ -10,6 +10,7 @@ const {
   login,
   sellerCreate,
   CustomerDetails,
+  sellerOrderDetails,
   sellerlogin,
   CustomerAddress,
   customerPayment,
@@ -62,6 +63,7 @@ const storageForProfile = multer.diskStorage({
     cb(null, uniqueFilename);
   },
 });
+
 const uploadsForProfile = multer({ storage: storageForProfile });
 const upload = multer({ storage: storage });
 router.get("/", helloWorld);
@@ -69,6 +71,8 @@ router.get("/vereifying/seller/:token", sellerVerifying);
 router.post("/login", login);
 router.post("/sellerlogin", sellerlogin);
 router.post("/seller/order/orderlist", sellerOrderList);
+router.post("/seller/order/details", sellerOrderDetails);
+
 router.post("/seller/product/:id", productById);
 router.post(
   "/sellercreate",
@@ -88,6 +92,7 @@ router.post(
   "/customer/order/paymentStatus/status/:txnId",
   customerPaymentStatus
 );
+
 router.post("/customer/order/orderplace", customerOrderPlace);
 router.post("/customer/order/orderlist", customerOrderList);
 router.post("/customer/order/ordercancel", CustomerOrderCancel);
@@ -113,14 +118,13 @@ router.post(
   authenticateMiddleware,
   updateProduct
 );
-
 router.post("/seller/allproduct", authenticateMiddleware, allSellerProduct);
-
 router.post(
   "/seller/deleteproduct",
   authenticateMiddleware,
   deleteSellerProduct
 );
+
 router.get("/latestproduct", RandomLatestProduct);
 router.get("/productBySearch/searchlist/q", ProductBySearch);
 router.get("/data/singlef/:id", productById);
